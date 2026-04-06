@@ -34675,7 +34675,8 @@ chorusmaster
 chorusmasters
 chorussed
 chorusses
-chorussing
+chorusing
+chose
 chosen
 chough
 choughs
