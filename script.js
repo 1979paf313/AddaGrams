@@ -1,7 +1,6 @@
 const MIN_BASE_LENGTH = 3;
 const MIN_MIDDLE_LENGTH = 4;
 const MIN_FINAL_LENGTH = 5;
-const timerDisplay = document.getElementById("timer");
 const scorePanel = document.getElementById("score-panel");
 const currentScoreDisplay = document.getElementById("current-score");
 let completionCounter = 0;
@@ -179,13 +178,7 @@ let gameState = {
   startPhase: "preview",
   visibleRowCount: 1,
   lastDroppedRowIndex: null,
-  startTime: null,
-  endTime: null,
-  timerSeconds: 0,
-  timerIntervalId: null,
   currentSolvedScore: null,
-  lastSolvedTimeSeconds: null,
-  showSubmitPrompt: false,
   isSubmitted: false,
   mode: "daily",
   pendingPracticePhrase: "",
@@ -199,7 +192,6 @@ let gameState = {
   dataReady: false,
   revealedLetterKeys: new Set(),
   spinningLetterKeys: new Set(),
-  canStart: false,
 
   rows: [],
 };
@@ -367,7 +359,6 @@ function runRevealSequence() {
     clearSpinningLetterKeys();
     renderBoard();
     renderShareButton();
-    startTimer();
   }, totalRevealTime + finalRevealPause);
 }
 
@@ -643,6 +634,7 @@ function handleInput(event) {
   updateRowUI(rowIndex);
   clearRowShakeFlags(currentRow);
   checkForWin();
+  updateScoreDisplay();
 }
 
 function getLetterCounts(word) {
@@ -769,25 +761,6 @@ function allRowsAreValid() {
 function initializePuzzle() {
   const normalizedPhrase = normalizeSecretPhrase(SECRET_PHRASE);
   gameState.rows = buildRowsFromPhrase(normalizedPhrase);
-}
-
-function startGame() {
-if (!gameState.canStart) {
-  showMessage("Choose or load a puzzle first.");
-  return;
-}
-
-  gameState.hasStarted = true;
-  gameState.hasWon = false;
-  gameState.timerSeconds = 0;
-  gameState.timerIntervalId = null;
-  gameState.currentSolvedScore = null;
-  gameState.lastSolvedTimeSeconds = null;
-  gameState.revealedLetterKeys = new Set();
-  gameState.spinningLetterKeys = new Set();
-
-  startButton.disabled = true;
-  runDropSequence();
 }
 
 function getLetterRevealOrder() {
@@ -1261,40 +1234,6 @@ function getFieldState(row, fieldName) {
   return "in-progress";
 }
 
-function formatTime(totalSeconds) {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-
-  const paddedMinutes = String(minutes).padStart(2, "0");
-  const paddedSeconds = String(seconds).padStart(2, "0");
-
-  return `${paddedMinutes}:${paddedSeconds}`;
-}
-
-function updateTimerDisplay() {
-  timerDisplay.textContent = formatTime(gameState.timerSeconds);
-}
-
-function startTimer() {
-  if (gameState.timerIntervalId !== null) {
-    return;
-  }
-
-  gameState.timerIntervalId = setInterval(() => {
-    gameState.timerSeconds++;
-    updateTimerDisplay();
-  }, 1000);
-}
-
-function stopTimer() {
-  if (gameState.timerIntervalId === null) {
-    return;
-  }
-
-  clearInterval(gameState.timerIntervalId);
-  gameState.timerIntervalId = null;
-}
-
 function getTotalLettersUsed(row) {
   let total = 0;
 
@@ -1307,31 +1246,87 @@ function getTotalLettersUsed(row) {
   return total;
 }
 
-function calculateScore(totalLetters, elapsedSeconds) {
-  return Math.round(
-    Math.max(20, 20 + 2.5 * totalLetters - elapsedSeconds / 2.5),
-  );
+function getValidatedLetterCount() {
+  let total = 0;
+
+  gameState.rows.forEach((row) => {
+    if (row.isValid) {
+      total += row.baseWord.length;
+      total += row.middleWord.length;
+      total += row.finalWord.length;
+    }
+  });
+
+  return total;
+}
+
+function getRowCount() {
+  return gameState.rows.length;
+}
+
+function getScoreBand(score, n) {
+  if (score === 0) {
+    return "Still Getting Started";
+  }
+
+  if (score >= 12 && score < 24) {
+    return "You Solved A Row!";
+  }
+  // Minimum solve threshold
+  const base = 12 * n;
+
+  if (score < base) {
+    return "Making Progress";
+  }
+
+  if (score >= base && score < 15 * n && allRowsAreValid()) {
+    return "Puzzle Solved — Can You Use More Letters?";
+  }
+
+  if (score >= base && score < 15 * n && !allRowsAreValid()) {
+    return "On Your Way To Greatness";
+  }
+
+  if (score >= 15 * n && score < 18 * n && allRowsAreValid()) {
+    return "Wow, Impressive Solve!";
+  }
+
+  if (score >= 15 * n && score < 18 * n && !allRowsAreValid()) {
+    return "Impressive!";
+  }
+
+  if (score >= 18 * n && score < 21 * n && allRowsAreValid()) {
+    return "Whoa, Excellent Solve!!";
+  }
+
+  if (score >= 18 * n && score < 21 * n && !allRowsAreValid()) {
+    return "Excellent!!";
+  }
+
+  if (score >= 21 * n && allRowsAreValid()) {
+    return "OMG, Masterful Solve!!!";
+  }
+
+  return "Masterful!!!";
 }
 
 function updateScoreDisplay() {
-  if (gameState.currentSolvedScore === null) {
+  const scorePanel = document.getElementById("score-panel");
+  const currentScoreDisplay = document.getElementById("current-score");
+  const scoreMessage = document.getElementById("score-message");
+
+  const score = getValidatedLetterCount();
+  const n = getRowCount();
+  const message = getScoreBand(score, n);
+
+  if (score === 0) {
     scorePanel.hidden = true;
     return;
   }
 
   scorePanel.hidden = false;
-  currentScoreDisplay.textContent = gameState.currentSolvedScore;
-}
-
-function captureSolvedScore() {
-  const totalLetters = getTotalLettersUsed();
-  const elapsedSeconds = gameState.timerSeconds;
-  const score = calculateScore(totalLetters, elapsedSeconds);
-
-  gameState.currentSolvedScore = score;
-
-  showMessage("Puzzle submitted!");
-  updateScoreDisplay();
+  currentScoreDisplay.textContent = score;
+  scoreMessage.textContent = message;
 }
 
 const message = document.getElementById("message");
@@ -1341,82 +1336,7 @@ function showMessage(text) {
 }
 
 function checkForWin() {
-  if (gameState.isSubmitted) {
-    return;
-  }
-
-  if (allRowsAreValid()) {
-    if (!gameState.showSubmitPrompt) {
-      gameState.showSubmitPrompt = true;
-      renderSubmitPrompt();
-    }
-  } else {
-    if (gameState.showSubmitPrompt) {
-      gameState.showSubmitPrompt = false;
-      renderSubmitPrompt();
-    }
-  }
-}
-
-function renderSubmitPrompt() {
-  console.log("renderSubmitPrompt", {
-    isSubmitted: gameState.isSubmitted,
-    showSubmitPrompt: gameState.showSubmitPrompt,
-  });
-  const promptDiv = document.getElementById("submit-prompt");
-
-  if (gameState.isSubmitted || !gameState.showSubmitPrompt) {
-    promptDiv.hidden = true;
-    promptDiv.innerHTML = "";
-    return;
-  }
-
-  promptDiv.hidden = false;
-
-  promptDiv.innerHTML = `
-    <div class="submit-box">
-      <div class="submit-message">
-        Do you want to submit now and get your score, or keep editing?
-      </div>
-
-      <div class="submit-buttons">
-        <button id="keep-working-btn">KEEP WORKING</button>
-        <button id="submit-btn">SUBMIT</button>
-      </div>
-
-      <div class="submit-note">
-        (More letters means a higher score, but more time means a lower score.)
-      </div>
-    </div>
-  `;
-
-  document
-    .getElementById("keep-working-btn")
-    .addEventListener("click", handleKeepWorking);
-
-  document.getElementById("submit-btn").addEventListener("click", handleSubmit);
-}
-
-function handleKeepWorking() {
-  gameState.showSubmitPrompt = false;
-  renderSubmitPrompt();
-}
-
-function handleSubmit() {
-  console.log("SUBMIT clicked", {
-    isSubmittedBefore: gameState.isSubmitted,
-    showSubmitPromptBefore: gameState.showSubmitPrompt,
-  });
-
-  gameState.isSubmitted = true;
-  gameState.showSubmitPrompt = false;
-
-  stopTimer();
-  captureSolvedScore();
-
-  renderSubmitPrompt();
-  renderBoard();
-  updateScoreDisplay();
+  // no op - scoring is now continuous
 }
 
 function initializePuzzle() {
@@ -1434,14 +1354,9 @@ async function loadGameData() {
   gameState.validWords = new Set(validWordLines);
   gameState.selectedPhrase = choosePuzzlePhrase();
   gameState.dataReady = true;
-  gameState.canStart = true;
 
-  console.log(
-    "Selected phrase:",
-    gameState.selectedPhrase,
-    "Source:",
-    gameState.puzzleSource,
-  );
+  launchSelectedPuzzle();
+  renderModePanel();
 
   initializePuzzle();
   renderBoard();
@@ -1483,37 +1398,51 @@ function renderShareButton() {
 }
 
 function handleDailyMode() {
-  gameState.mode = "daily";
-  gameState.showFairnessWarning = false;
-  gameState.pendingNormalizedPracticePhrase = null;
-
-  if (gameState.dataReady) {
-    gameState.selectedPhrase = choosePuzzlePhrase();
-    gameState.puzzleSource = gameState.urlPhrase ? "shared" : "daily";
-    gameState.startPhase = "preview";
-    gameState.visibleRowCount = 1;
-    gameState.revealedLetterKeys = new Set();
-    gameState.spinningLetterKeys = new Set();
-    gameState.currentSolvedScore = null;
-    gameState.isSubmitted = false;
-    gameState.showSubmitPrompt = false;
-    gameState.canStart = true;
-
-    initializePuzzle();
-    renderBoard();
-    renderSubmitPrompt();
-    updateScoreDisplay();
+  if (!gameState.dataReady) {
+    return;
   }
 
-  renderFairnessWarning([]);
+  gameState.mode = "daily";
+  gameState.puzzleSource = "daily";
+  gameState.urlPhrase = null;
+  gameState.selectedPhrase = selectTrueDailyPhrase();
+
   renderModePanel();
+  launchSelectedPuzzle();
+}
+
+function selectTrueDailyPhrase() {
+  return selectDailyFairPhrase();
+}
+
+function launchSelectedPuzzle() {
+  showMessage("");  
+
+  gameState.startPhase = "preview";
+  gameState.visibleRowCount = 1;
+  gameState.lastDroppedRowIndex = null;
+  gameState.revealedLetterKeys = new Set();
+  gameState.spinningLetterKeys = new Set();
+  gameState.currentSolvedScore = null;
+  gameState.pendingNormalizedPracticePhrase = null;
+  gameState.showFairnessWarning = false;
+
+  initializePuzzle();
+  updateScoreDisplay();
+  renderFairnessWarning([]);
+  renderBoard();
+
+  const introDelay = 300;
+
+  setTimeout(() => {
+    runDropSequence();
+  }, introDelay);
 }
 
 function handlePracticeMode() {
   gameState.mode = "practice";
   gameState.showFairnessWarning = false;
   gameState.pendingNormalizedPracticePhrase = null;
-  gameState.canStart = false;
 
   renderFairnessWarning([]);
   renderModePanel();
@@ -1549,24 +1478,11 @@ function loadPracticePuzzle(normalizedPhrase) {
   gameState.selectedPhrase = normalizedPhrase;
   gameState.puzzleSource = "practice";
   gameState.urlPhrase = null;
-  gameState.showFairnessWarning = false;
-  gameState.pendingNormalizedPracticePhrase = null;
-  gameState.startPhase = "preview";
-  gameState.visibleRowCount = 1;
-  gameState.revealedLetterKeys = new Set();
-  gameState.spinningLetterKeys = new Set();
-  gameState.currentSolvedScore = null;
-  gameState.isSubmitted = false;
-  gameState.showSubmitPrompt = false;
-  gameState.canStart = true;
+  gameState.mode = "practice";
 
-  initializePuzzle();
-  renderModePanel();
-  renderFairnessWarning([]);
-  renderSubmitPrompt();
-  renderBoard();
-  updateScoreDisplay();
   showMessage("Practice puzzle loaded.");
+  renderModePanel();
+  launchSelectedPuzzle();
 }
 
 function renderFairnessWarning(unfairPairs) {
@@ -1620,7 +1536,6 @@ function renderModePanel() {
   const input = document.getElementById("practice-phrase-input");
   const dailyBtn = document.getElementById("daily-mode-btn");
   const practiceBtn = document.getElementById("practice-mode-btn");
-  const startBtn = document.getElementById("start-button");
 
   if (gameState.mode === "practice") {
     practicePanel.hidden = false;
@@ -1635,11 +1550,7 @@ function renderModePanel() {
   }
 
   input.value = gameState.pendingPracticePhrase;
-  startBtn.disabled = !gameState.canStart;
 }
-
-const startButton = document.getElementById("start-button");
-startButton.addEventListener("click", startGame);
 
 document.getElementById("share-btn").addEventListener("click", handleShare);
 document
@@ -1658,5 +1569,4 @@ document
   });
 
 loadGameData();
-updateTimerDisplay();
 updateScoreDisplay();

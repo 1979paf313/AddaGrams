@@ -354,15 +354,15 @@
       color: white;
     }
 
-#practice-panel {
-  justify-content: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
+    #practice-panel {
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
 
-#practice-panel.visible {
-  display: flex;
-}
+    #practice-panel.visible {
+      display: flex;
+    }
 
     #practice-phrase-input {
       width: 260px;
@@ -375,31 +375,24 @@
       text-align: center;
     }
 
-.mode-selected {
-  background-color: #b59f3b !important;
-  border-color: #d6c25c !important;
-  color: black !important;
-}
+    .mode-selected {
+      background-color: #b59f3b !important;
+      border-color: #d6c25c !important;
+      color: black !important;
+    }
 
-.warning-spacer {
-  height: 12px;
-}
+    .warning-spacer {
+      height: 12px;
+    }
   </style>
   <body>
     <div id="game">
       <h1>AddaGrams</h1>
 
-      <div id="top-bar">
-        <button id="start-button">Start</button>
-        <div id="timer">00:00</div>
-      </div>
-
       <div id="score-panel" hidden>
-        <div id="current-score-line">
-          Score: <span id="current-score">0</span>
-        </div>
+        <div>Letters: <span id="current-score">0</span></div>
+        <div id="score-message"></div>
       </div>
-      <div id="submit-prompt" hidden></div>
       <div id="message"></div>
       <div id="mode-panel">
         <div id="mode-buttons">
