@@ -1362,16 +1362,16 @@ async function loadGameData() {
   gameState.secretPhrases = secretPhrases;
   gameState.fairPairs = new Set(fairPairLines);
   gameState.validWords = new Set(validWordLines);
-  gameState.selectedPhrase = choosePuzzlePhrase();
   gameState.dataReady = true;
 
-  launchSelectedPuzzle();
-  renderModePanel();
+  const initialState = getInitialPuzzleState();
 
-  initializePuzzle();
-  renderBoard();
+  gameState.selectedPhrase = initialState.selectedPhrase;
+  gameState.mode = initialState.mode;
+  gameState.puzzleSource = initialState.puzzleSource;
+
+  launchSelectedPuzzle(initialState.savedProgress);
   renderModePanel();
-  renderFairnessWarning([]);
 }
 
 function encodePhraseForUrl(phrase) {
@@ -1425,8 +1425,8 @@ function selectTrueDailyPhrase() {
   return selectDailyFairPhrase();
 }
 
-function launchSelectedPuzzle() {
-  stopTimer();
+function launchSelectedPuzzle(savedProgress = null) {
+ 
   showMessage("");
 
   gameState.startPhase = "preview";
@@ -1435,28 +1435,40 @@ function launchSelectedPuzzle() {
   gameState.revealedLetterKeys = new Set();
   gameState.spinningLetterKeys = new Set();
   gameState.currentSolvedScore = null;
-  gameState.timerSeconds = 0;
-  gameState.timerStartTimestamp = null;
   gameState.pendingNormalizedPracticePhrase = null;
   gameState.showFairnessWarning = false;
 
   initializePuzzle();
 
-  const restored = restoreProgressIfAvailable();
+  if (savedProgress && savedProgress.selectedPhrase === gameState.selectedPhrase) {
+    savedProgress.rows.forEach((savedRow, index) => {
+      const row = gameState.rows[index];
 
-  if (restored) {
+      if (!row) {
+        return;
+      }
+
+      row.baseWord = savedRow.baseWord || "";
+      row.middleWord = savedRow.middleWord || "";
+      row.finalWord = savedRow.finalWord || "";
+
+      updateExpectedLengths(row);
+      updateCompletionTimes(row);
+      updateRowStates(row);
+      updateRowDictionaryValidity(row);
+      updateRowValidation(row);
+    });
+
     gameState.startPhase = "ready";
     gameState.visibleRowCount = gameState.rows.length;
     gameState.revealedLetterKeys = new Set(getLetterRevealOrder());
 
-    updateTimerDisplay();
     updateScoreDisplay();
     renderFairnessWarning([]);
     renderBoard();
     return;
   }
 
-  updateTimerDisplay();
   updateScoreDisplay();
   renderFairnessWarning([]);
   renderBoard();
@@ -1490,42 +1502,6 @@ function saveProgress() {
   localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(savableState));
 }
 
-function restoreProgressIfAvailable() {
-  const saved = loadSavedProgress();
-
-  if (!saved) {
-    return false;
-  }
-
-  if (saved.selectedPhrase !== gameState.selectedPhrase) {
-    return false;
-  }
-
-  if (!Array.isArray(saved.rows)) {
-    return false;
-  }
-
-  saved.rows.forEach((savedRow, index) => {
-    const row = gameState.rows[index];
-
-    if (!row) {
-      return;
-    }
-
-    row.baseWord = savedRow.baseWord || "";
-    row.middleWord = savedRow.middleWord || "";
-    row.finalWord = savedRow.finalWord || "";
-
-    updateExpectedLengths(row);
-    updateCompletionTimes(row);
-    updateRowStates(row);
-    updateRowDictionaryValidity(row);
-    updateRowValidation(row);
-  });
-
-  return true;
-}
-
 function loadSavedProgress() {
   const raw = localStorage.getItem(SAVE_STORAGE_KEY);
 
@@ -1543,6 +1519,59 @@ function loadSavedProgress() {
 
 function clearSavedProgress() {
   localStorage.removeItem(SAVE_STORAGE_KEY);
+}
+
+function savedProgressIsUsable(saved) {
+  if (!saved) {
+    return false;
+  }
+
+  if (typeof saved.selectedPhrase !== "string" || !saved.selectedPhrase) {
+    return false;
+  }
+
+  if (!Array.isArray(saved.rows)) {
+    return false;
+  }
+
+  return true;
+}
+
+function getInitialPuzzleState() {
+  const saved = loadSavedProgress();
+
+  if (savedProgressIsUsable(saved)) {
+    return {
+      selectedPhrase: saved.selectedPhrase,
+      mode: saved.mode || "daily",
+      puzzleSource: saved.puzzleSource || "daily",
+      savedProgress: saved,
+    };
+  }
+
+  const phraseFromUrl = getPhraseFromUrl();
+
+  if (phraseFromUrl) {
+    try {
+      const normalizedPhrase = normalizeSecretPhrase(phraseFromUrl);
+
+      return {
+        selectedPhrase: normalizedPhrase,
+        mode: "daily",
+        puzzleSource: "shared",
+        savedProgress: null,
+      };
+    } catch (error) {
+      console.warn("Invalid phrase in URL. Falling back to daily puzzle.", error);
+    }
+  }
+
+  return {
+    selectedPhrase: selectTrueDailyPhrase(),
+    mode: "daily",
+    puzzleSource: "daily",
+    savedProgress: null,
+  };
 }
 
 function handlePracticeMode() {
