@@ -3,6 +3,7 @@ const MIN_MIDDLE_LENGTH = 4;
 const MIN_FINAL_LENGTH = 5;
 const scorePanel = document.getElementById("score-panel");
 const currentScoreDisplay = document.getElementById("current-score");
+const SAVE_STORAGE_KEY = "addagrams_saved_progress";
 let completionCounter = 0;
 
 function createEmptyRow(letterA, letterB) {
@@ -635,6 +636,7 @@ function handleInput(event) {
   clearRowShakeFlags(currentRow);
   checkForWin();
   updateScoreDisplay();
+  saveProgress();
 }
 
 function getLetterCounts(word) {
@@ -1332,7 +1334,15 @@ function updateScoreDisplay() {
 const message = document.getElementById("message");
 
 function showMessage(text) {
-  message.textContent = text;
+  const messageDiv = document.getElementById("message");
+
+  if (!text) {
+    messageDiv.style.opacity = 0;
+    return;
+  }
+
+  messageDiv.textContent = text;
+  messageDiv.style.opacity = 1;
 }
 
 function checkForWin() {
@@ -1406,7 +1416,7 @@ function handleDailyMode() {
   gameState.puzzleSource = "daily";
   gameState.urlPhrase = null;
   gameState.selectedPhrase = selectTrueDailyPhrase();
-
+  clearSavedProgress();
   renderModePanel();
   launchSelectedPuzzle();
 }
@@ -1416,7 +1426,8 @@ function selectTrueDailyPhrase() {
 }
 
 function launchSelectedPuzzle() {
-  showMessage("");  
+  stopTimer();
+  showMessage("");
 
   gameState.startPhase = "preview";
   gameState.visibleRowCount = 1;
@@ -1424,10 +1435,28 @@ function launchSelectedPuzzle() {
   gameState.revealedLetterKeys = new Set();
   gameState.spinningLetterKeys = new Set();
   gameState.currentSolvedScore = null;
+  gameState.timerSeconds = 0;
+  gameState.timerStartTimestamp = null;
   gameState.pendingNormalizedPracticePhrase = null;
   gameState.showFairnessWarning = false;
 
   initializePuzzle();
+
+  const restored = restoreProgressIfAvailable();
+
+  if (restored) {
+    gameState.startPhase = "ready";
+    gameState.visibleRowCount = gameState.rows.length;
+    gameState.revealedLetterKeys = new Set(getLetterRevealOrder());
+
+    updateTimerDisplay();
+    updateScoreDisplay();
+    renderFairnessWarning([]);
+    renderBoard();
+    return;
+  }
+
+  updateTimerDisplay();
   updateScoreDisplay();
   renderFairnessWarning([]);
   renderBoard();
@@ -1437,6 +1466,83 @@ function launchSelectedPuzzle() {
   setTimeout(() => {
     runDropSequence();
   }, introDelay);
+}
+
+function getSavableGameState() {
+  return {
+    selectedPhrase: gameState.selectedPhrase,
+    mode: gameState.mode,
+    puzzleSource: gameState.puzzleSource,
+    rows: gameState.rows.map((row) => ({
+      baseWord: row.baseWord,
+      middleWord: row.middleWord,
+      finalWord: row.finalWord,
+    })),
+  };
+}
+
+function saveProgress() {
+  if (!gameState.selectedPhrase || !gameState.rows.length) {
+    return;
+  }
+
+  const savableState = getSavableGameState();
+  localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(savableState));
+}
+
+function restoreProgressIfAvailable() {
+  const saved = loadSavedProgress();
+
+  if (!saved) {
+    return false;
+  }
+
+  if (saved.selectedPhrase !== gameState.selectedPhrase) {
+    return false;
+  }
+
+  if (!Array.isArray(saved.rows)) {
+    return false;
+  }
+
+  saved.rows.forEach((savedRow, index) => {
+    const row = gameState.rows[index];
+
+    if (!row) {
+      return;
+    }
+
+    row.baseWord = savedRow.baseWord || "";
+    row.middleWord = savedRow.middleWord || "";
+    row.finalWord = savedRow.finalWord || "";
+
+    updateExpectedLengths(row);
+    updateCompletionTimes(row);
+    updateRowStates(row);
+    updateRowDictionaryValidity(row);
+    updateRowValidation(row);
+  });
+
+  return true;
+}
+
+function loadSavedProgress() {
+  const raw = localStorage.getItem(SAVE_STORAGE_KEY);
+
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    console.warn("Saved progress could not be parsed.");
+    return null;
+  }
+}
+
+function clearSavedProgress() {
+  localStorage.removeItem(SAVE_STORAGE_KEY);
 }
 
 function handlePracticeMode() {
@@ -1482,6 +1588,7 @@ function loadPracticePuzzle(normalizedPhrase) {
 
   showMessage("Practice puzzle loaded.");
   renderModePanel();
+  clearSavedProgress();
   launchSelectedPuzzle();
 }
 
