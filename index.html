@@ -221,8 +221,6 @@
     }
 
     .revealed-letter {
-      background-color: #d6c25c;
-      border-color: #f0df87;
       color: white;
     }
 
@@ -384,6 +382,19 @@
     .warning-spacer {
       height: 12px;
     }
+
+    #puzzle-label {
+      text-align: center;
+      font-weight: bold;
+      margin-bottom: 12px;
+      color: #d6c25c;
+    }
+
+    #share-container {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
   </style>
   <body>
     <div id="game">
@@ -411,10 +422,12 @@
 
         <div id="fairness-warning" hidden></div>
       </div>
+      <div id="puzzle-label"></div>
       <div id="board"></div>
     </div>
     <div id="share-container" hidden>
-      <button id="share-btn">Share Puzzle</button>
+      <button id="share-puzzle-btn">Share Puzzle</button>
+      <button id="share-results-btn">Share Results</button>
     </div>
     <script src="script.js"></script>
   </body>
