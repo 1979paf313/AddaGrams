@@ -144,11 +144,39 @@
       border-color: #c53030;
     }
 
-    #score-panel {
-      text-align: center;
-      margin-bottom: 16px;
-      font-weight: bold;
-    }
+#score-panel {
+  text-align: center;
+  margin-bottom: 16px;
+  padding: 14px 18px;
+  background-color: #1f1f21;
+  border: 2px solid #3a3a3c;
+  border-radius: 12px;
+  max-width: 280px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+#score-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #aaa;
+  margin-bottom: 4px;
+}
+
+#current-score {
+  font-size: 2rem;
+  font-weight: bold;
+  line-height: 1.1;
+  color: white;
+}
+
+#score-message {
+  margin-top: 6px;
+  font-size: 0.95rem;
+  color: #d6c25c;
+  min-height: 1.2em;
+}
 
     #current-score-line,
     #best-score-line {
@@ -400,10 +428,11 @@
     <div id="game">
       <h1>AddaGrams</h1>
 
-      <div id="score-panel" hidden>
-        <div>Letters: <span id="current-score">0</span></div>
-        <div id="score-message"></div>
-      </div>
+<div id="score-panel" hidden>
+  <div id="score-label">Letters used</div>
+  <div id="current-score">0</div>
+  <div id="score-message"></div>
+</div>
       <div id="message"></div>
       <div id="mode-panel">
         <div id="mode-buttons">
