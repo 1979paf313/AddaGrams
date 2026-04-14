@@ -3,7 +3,7 @@ const MIN_MIDDLE_LENGTH = 4;
 const MIN_FINAL_LENGTH = 5;
 const scorePanel = document.getElementById("score-panel");
 const currentScoreDisplay = document.getElementById("current-score");
-const SAVE_STORAGE_KEY = "addagrams_saved_progress";
+const scoreMessage = document.getElementById("score-message");
 const DAILY_SAVES_STORAGE_KEY = "addagrams_daily_saves";
 const NON_DAILY_SAVE_STORAGE_KEY = "addagrams_non_daily_save";
 let completionCounter = 0;
@@ -182,7 +182,6 @@ let gameState = {
   visibleRowCount: 1,
   lastDroppedRowIndex: null,
   currentSolvedScore: null,
-  isSubmitted: false,
   mode: "daily",
   pendingPracticePhrase: "",
   showFairnessWarning: false,
@@ -458,8 +457,7 @@ function renderBoard() {
     baseInput.dataset.row = rowIndex;
     baseInput.dataset.field = "baseWord";
     baseInput.addEventListener("input", handleInput);
-    baseInput.disabled =
-      gameState.startPhase !== "ready" || gameState.isSubmitted;
+    baseInput.disabled = gameState.startPhase !== "ready";
 
     const letterADiv = document.createElement("div");
     letterADiv.className = "chain-letter";
@@ -485,8 +483,7 @@ function renderBoard() {
     middleInput.dataset.row = rowIndex;
     middleInput.dataset.field = "middleWord";
     middleInput.addEventListener("input", handleInput);
-    middleInput.disabled =
-      gameState.startPhase !== "ready" || gameState.isSubmitted;
+    middleInput.disabled = gameState.startPhase !== "ready";
 
     const letterBDiv = document.createElement("div");
     letterBDiv.className = "chain-letter";
@@ -512,8 +509,7 @@ function renderBoard() {
     finalInput.dataset.row = rowIndex;
     finalInput.dataset.field = "finalWord";
     finalInput.addEventListener("input", handleInput);
-    finalInput.disabled =
-      gameState.startPhase !== "ready" || gameState.isSubmitted;
+    finalInput.disabled = gameState.startPhase !== "ready";
 
     rowDiv.appendChild(baseInput);
     rowDiv.appendChild(letterADiv);
@@ -638,7 +634,6 @@ function handleInput(event) {
 
   updateRowUI(rowIndex);
   clearRowShakeFlags(currentRow);
-  checkForWin();
   updateScoreDisplay();
   saveProgress();
 }
@@ -762,11 +757,6 @@ function checkRowCompletion(row) {
 
 function allRowsAreValid() {
   return gameState.rows.every((row) => row.isValid);
-}
-
-function initializePuzzle() {
-  const normalizedPhrase = normalizeSecretPhrase(SECRET_PHRASE);
-  gameState.rows = buildRowsFromPhrase(normalizedPhrase);
 }
 
 function getLetterRevealOrder() {
@@ -1145,113 +1135,6 @@ function updateCompletionTimes(row) {
   }
 }
 
-function getFieldState(row, fieldName) {
-  const word = row[fieldName];
-
-  if (!word) {
-    return "empty";
-  }
-
-  let expectedLength = null;
-
-  if (fieldName === "baseWord") {
-    expectedLength = row.baseExpectedLength;
-  } else if (fieldName === "middleWord") {
-    expectedLength = row.middleExpectedLength;
-  } else if (fieldName === "finalWord") {
-    expectedLength = row.finalExpectedLength;
-  }
-
-  if (expectedLength === null) {
-    return "in-progress";
-  }
-
-  if (word.length < expectedLength) {
-    return "in-progress";
-  }
-
-  if (word.length > expectedLength) {
-    return "error";
-  }
-
-  if (fieldName === "baseWord") {
-    if (
-      row.middleWord &&
-      row.middleWord.length === row.middleExpectedLength &&
-      row.step1IsValid
-    ) {
-      return "confirmed";
-    }
-    if (
-      row.finalWord &&
-      row.finalWord.length === row.finalExpectedLength &&
-      row.isValidDoubleStep
-    ) {
-      return "confirmed";
-    }
-    if (fieldName === row.lengthAnchorField) {
-      return "provisional";
-    }
-    return "error";
-  }
-
-  if (fieldName === "middleWord") {
-    if (
-      row.baseWord &&
-      row.baseWord.length === row.baseExpectedLength &&
-      row.step1IsValid
-    ) {
-      return "confirmed";
-    }
-    if (
-      row.finalWord &&
-      row.finalWord.length === row.finalExpectedLength &&
-      row.step2IsValid
-    ) {
-      return "confirmed";
-    }
-    if (fieldName === row.lengthAnchorField) {
-      return "provisional";
-    }
-    return "error";
-  }
-
-  if (fieldName === "finalWord") {
-    if (
-      row.middleWord &&
-      row.middleWord.length === row.middleExpectedLength &&
-      row.step2IsValid
-    ) {
-      return "confirmed";
-    }
-    if (
-      row.baseWord &&
-      row.baseWord.length === row.baseExpectedLength &&
-      row.isValidDoubleStep
-    ) {
-      return "confirmed";
-    }
-    if (fieldName === row.lengthAnchorField) {
-      return "provisional";
-    }
-    return "error";
-  }
-
-  return "in-progress";
-}
-
-function getTotalLettersUsed(row) {
-  let total = 0;
-
-  for (const row of gameState.rows) {
-    total += row.baseWord.length;
-    total += row.middleWord.length;
-    total += row.finalWord.length;
-  }
-
-  return total;
-}
-
 function getValidatedLetterCount() {
   let total = 0;
 
@@ -1317,25 +1200,20 @@ function getScoreBand(score, n) {
 }
 
 function updateScoreDisplay() {
-  const scorePanel = document.getElementById("score-panel");
-  const currentScoreDisplay = document.getElementById("current-score");
-  const scoreMessage = document.getElementById("score-message");
-
   const score = getValidatedLetterCount();
   const n = getRowCount();
-  const message = getScoreBand(score, n);
+  const scoreText = getScoreBand(score, n);
 
   if (score === 0) {
     scorePanel.hidden = true;
+    scoreMessage.textContent = "";
     return;
   }
 
   scorePanel.hidden = false;
   currentScoreDisplay.textContent = score;
-  scoreMessage.textContent = message;
+  scoreMessage.textContent = scoreText;
 }
-
-const message = document.getElementById("message");
 
 function showMessage(text) {
   const messageDiv = document.getElementById("message");
@@ -1347,10 +1225,6 @@ function showMessage(text) {
 
   messageDiv.textContent = text;
   messageDiv.style.opacity = 1;
-}
-
-function checkForWin() {
-  // no op - scoring is now continuous
 }
 
 function initializePuzzle() {
@@ -1414,23 +1288,6 @@ function saveDailySaves(dailySaves) {
 
 function encodePhraseForUrl(phrase) {
   return btoa(phrase);
-}
-
-function handleShare() {
-  const phrase = gameState.selectedPhrase;
-  const encoded = btoa(phrase);
-
-  const url =
-    window.location.origin + window.location.pathname + `?phrase=${encoded}`;
-
-  navigator.clipboard
-    .writeText(url)
-    .then(() => {
-      showMessage("Link copied!");
-    })
-    .catch(() => {
-      showMessage("Could not copy link.");
-    });
 }
 
 function renderShareButton() {
@@ -1620,21 +1477,6 @@ function getSavableGameState() {
   };
 }
 
-function getSavableGameState() {
-  return {
-    selectedPhrase: gameState.selectedPhrase,
-    mode: gameState.mode,
-    puzzleSource: gameState.puzzleSource,
-    dailyDate:
-      gameState.puzzleSource === "daily" ? getTorontoDateStamp() : null,
-    rows: gameState.rows.map((row) => ({
-      baseWord: row.baseWord,
-      middleWord: row.middleWord,
-      finalWord: row.finalWord,
-    })),
-  };
-}
-
 function saveProgress() {
   if (!gameState.selectedPhrase || !gameState.rows.length) {
     return;
@@ -1672,23 +1514,8 @@ function loadNonDailySave() {
   }
 }
 
-function loadSavedProgress() {
-  const raw = localStorage.getItem(SAVE_STORAGE_KEY);
-
-  if (!raw) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(raw);
-  } catch (error) {
-    console.warn("Saved progress could not be parsed.");
-    return null;
-  }
-}
-
-function clearSavedProgress() {
-  localStorage.removeItem(SAVE_STORAGE_KEY);
+function clearNonDailySave() {
+  localStorage.removeItem(NON_DAILY_SAVE_STORAGE_KEY);
 }
 
 function savedProgressIsUsable(saved) {
@@ -1823,7 +1650,7 @@ function loadPracticePuzzle(normalizedPhrase) {
 
   showMessage("Practice puzzle loaded.");
   renderModePanel();
-  clearSavedProgress();
+  clearNonDailySave();
   launchSelectedPuzzle();
 }
 
@@ -1918,21 +1745,30 @@ const sharePuzzleBtn = document.getElementById("share-puzzle-btn");
 const shareResultsBtn = document.getElementById("share-results-btn");
 
 sharePuzzleBtn.addEventListener("click", () => {
-  // EXISTING LOGIC — do not change
   const encodedPhrase = btoa(gameState.selectedPhrase);
   const url = `${window.location.origin}${window.location.pathname}?phrase=${encodedPhrase}`;
 
-  navigator.clipboard.writeText(url);
-
-  alert("Puzzle link copied!");
+  navigator.clipboard
+    .writeText(url)
+    .then(() => {
+      showMessage("Puzzle link copied!");
+    })
+    .catch(() => {
+      showMessage("Could not copy puzzle link.");
+    });
 });
 
 shareResultsBtn.addEventListener("click", () => {
   const text = buildShareText();
 
-  navigator.clipboard.writeText(text);
-
-  alert("Results copied!");
+  navigator.clipboard
+    .writeText(text)
+    .then(() => {
+      showMessage("Results copied!");
+    })
+    .catch(() => {
+      showMessage("Could not copy results.");
+    });
 });
 
 loadGameData();
