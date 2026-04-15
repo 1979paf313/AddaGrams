@@ -228,3 +228,27 @@ select:focus {
   opacity: 0.92;
   pointer-events: none;
 }
+
+.game-panel {
+  position: relative;
+}
+
+.game-title-vertical {
+  position: absolute;
+  left: -34px;
+  top: 50%;
+  margin: 0;
+  transform: translateY(-50%) rotate(-90deg);
+  transform-origin: center;
+  white-space: nowrap;
+
+  font-family: var(--font-ui);
+  font-size: 2.5rem;
+  line-height: 1;
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.02em;
+
+  color: color-mix(in srgb, var(--color-text) 90%, var(--color-accent-secondary) 10%);
+  opacity: 0.92;
+  pointer-events: none;
+}
