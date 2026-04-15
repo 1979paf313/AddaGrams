@@ -6,6 +6,10 @@ const currentScoreDisplay = document.getElementById("current-score");
 const scoreMessage = document.getElementById("score-message");
 const DAILY_SAVES_STORAGE_KEY = "addagrams_daily_saves";
 const NON_DAILY_SAVE_STORAGE_KEY = "addagrams_non_daily_save";
+const howToPlayModal = document.getElementById("how-to-play-modal");
+const howToPlayBtn = document.getElementById("how-to-play-btn");
+const closeHowToPlayBtn = document.getElementById("close-how-to-play-btn");
+
 let completionCounter = 0;
 
 function createEmptyRow(letterA, letterB) {
@@ -1354,6 +1358,18 @@ function updatePuzzleLabel() {
   puzzleLabel.textContent = "";
 }
 
+function getShareStepSquare(stepStatus) {
+  if (stepStatus === "green") {
+    return "🟩";
+  }
+
+  if (stepStatus === "red") {
+    return "🟥";
+  }
+
+  return "🟨";
+}
+
 function buildShareText() {
   const dateStamp = getTorontoDateStamp();
   const formattedDate = formatDateLong(dateStamp);
@@ -1377,7 +1393,10 @@ function buildShareText() {
     const middleLen = row.middleWord.length || 0;
     const finalLen = row.finalWord.length || 0;
 
-    text += `${baseLen} 🟨 ${middleLen} 🟨 ${finalLen}\n`;
+    const firstSquare = getShareStepSquare(getLetterAStatus(row));
+    const secondSquare = getShareStepSquare(getLetterBStatus(row));
+
+    text += `${baseLen} ${firstSquare} ${middleLen} ${secondSquare} ${finalLen}\n`;
   });
 
   return text.trim();
@@ -1726,6 +1745,14 @@ function renderModePanel() {
   updatePuzzleLabel();
 }
 
+function openHowToPlay() {
+  howToPlayModal.hidden = false;
+}
+
+function closeHowToPlay() {
+  howToPlayModal.hidden = true;
+}
+
 document
   .getElementById("daily-mode-btn")
   .addEventListener("click", handleDailyMode);
@@ -1769,6 +1796,21 @@ shareResultsBtn.addEventListener("click", () => {
     .catch(() => {
       showMessage("Could not copy results.");
     });
+});
+
+howToPlayBtn.addEventListener("click", openHowToPlay);
+closeHowToPlayBtn.addEventListener("click", closeHowToPlay);
+
+howToPlayModal.addEventListener("click", (event) => {
+  if (event.target === howToPlayModal) {
+    closeHowToPlay();
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !howToPlayModal.hidden) {
+    closeHowToPlay();
+  }
 });
 
 loadGameData();
