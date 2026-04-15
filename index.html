@@ -2,430 +2,494 @@
 <html>
   <head>
     <meta charset="UTF-8" />
+    <title>AddaGrams</title>
+    <link rel="stylesheet" href="theme.css" />
+    <style>
+      #game {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4);
+      }
+
+      .addagrams-panel {
+        padding: var(--space-6);
+      }
+
+      #mode-panel {
+        margin-bottom: var(--space-1);
+        text-align: center;
+      }
+
+      #mode-buttons {
+        display: flex;
+        justify-content: center;
+        gap: var(--space-3);
+        margin-bottom: var(--space-1);
+        flex-wrap: wrap;
+      }
+
+      #puzzle-label {
+        text-align: center;
+        font-weight: var(--weight-bold);
+        margin-bottom: var(--space-2);
+        color: var(--color-accent-secondary);
+      }
+
+      #message {
+        min-height: 0;
+        margin: 0 auto var(--space-2);
+        text-align: center;
+        font-weight: var(--weight-bold);
+        max-width: 520px;
+      }
+
+      #practice-panel {
+        justify-content: center;
+        gap: var(--space-3);
+        flex-wrap: wrap;
+      }
+
+      #practice-panel.visible {
+        display: flex;
+      }
+
+      #practice-phrase-input {
+        width: 260px;
+        text-transform: uppercase;
+        text-align: center;
+      }
+
+      #fairness-warning {
+        margin-top: var(--space-2);
+        color: var(--color-error);
+        font-weight: var(--weight-semibold);
+      }
+
+      .warning-spacer {
+        height: 12px;
+      }
+
+      #score-panel {
+        text-align: center;
+        margin: 0 auto var(--space-2);
+        padding: 14px 18px;
+        max-width: 280px;
+      }
+
+      #score-label {
+        font-size: var(--text-xs);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--color-text-muted);
+        margin-bottom: 4px;
+      }
+
+      #current-score {
+        font-size: 2rem;
+        font-weight: var(--weight-bold);
+        line-height: 1.1;
+        color: var(--color-text);
+      }
+
+      #score-message {
+        margin-top: 6px;
+        font-size: 0.95rem;
+        color: var(--color-accent-secondary);
+        min-height: 1.2em;
+      }
+
+      #board {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-3);
+      }
+
+      .chain-row {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        flex-wrap: wrap;
+        padding: var(--space-2);
+        border-radius: var(--radius-md);
+      }
+
+      .chain-input {
+        width: 120px;
+        padding: 10px;
+        font-size: 1rem;
+        text-transform: uppercase;
+        text-align: center;
+        border: 2px solid #565758;
+        border-radius: var(--radius-sm);
+        box-sizing: border-box;
+        background: var(--color-surface-soft);
+        color: var(--color-text);
+      }
+
+      .chain-input::placeholder {
+        color: var(--color-text-muted);
+        opacity: 1;
+      }
+
+      .chain-letter {
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem;
+        font-weight: var(--weight-bold);
+        background-color: var(--color-accent-secondary);
+        color: white;
+        border: 2px solid
+          color-mix(in srgb, var(--color-accent-secondary) 70%, white 20%);
+        border-radius: var(--radius-sm);
+        box-sizing: border-box;
+        flex-shrink: 0;
+      }
+
+      .chain-letter.hidden-letter {
+        background-color: #3a3a3c;
+        border-color: #565758;
+        color: white;
+      }
+
+      .valid-row {
+        background-color: color-mix(
+          in srgb,
+          var(--color-success) 28%,
+          transparent
+        );
+        border-radius: var(--radius-md);
+      }
+
+      .valid-step {
+        border-color: var(--color-success) !important;
+      }
+
+      .invalid-step {
+        border-color: var(--color-error) !important;
+      }
+
+      .letter-box-yellow {
+        background-color: var(--color-accent-secondary);
+        border-color: color-mix(
+          in srgb,
+          var(--color-accent-secondary) 70%,
+          white 20%
+        );
+      }
+
+      .letter-box-green {
+        background-color: var(--color-success);
+        border-color: color-mix(in srgb, var(--color-success) 75%, white 18%);
+      }
+
+      .letter-box-red {
+        background-color: var(--color-error);
+        border-color: color-mix(in srgb, var(--color-error) 75%, white 18%);
+      }
+
+      .field-in-progress,
+      .field-provisional {
+        border-width: 3px;
+        border-color: var(--color-accent-secondary);
+      }
+
+      .field-confirmed {
+        border-width: 3px;
+        border-color: var(--color-success);
+      }
+
+      .field-error {
+        border-width: 3px;
+        border-color: var(--color-error);
+      }
+
+      .dictionary-invalid-text {
+        color: color-mix(in srgb, var(--color-error) 75%, white 15%);
+      }
+
+      @keyframes dictionaryShake {
+        0% {
+          transform: translateX(0);
+        }
+        20% {
+          transform: translateX(-6px);
+        }
+        40% {
+          transform: translateX(6px);
+        }
+        60% {
+          transform: translateX(-5px);
+        }
+        80% {
+          transform: translateX(5px);
+        }
+        100% {
+          transform: translateX(0);
+        }
+      }
+
+      .dictionary-shake {
+        animation: dictionaryShake 0.35s;
+      }
+
+      @keyframes rowDropIn {
+        0% {
+          opacity: 0;
+          transform: translateY(-36px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes bottomRowBump {
+        0% {
+          opacity: 0;
+          transform: translateY(-36px);
+        }
+        30% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-10px);
+        }
+        100% {
+          transform: translateY(0);
+        }
+      }
+
+      .dropping-row {
+        animation: rowDropIn 0.34s ease-out;
+      }
+
+      .bottom-bump-row {
+        animation: bottomRowBump 0.65s var(--ease-bounce);
+      }
+
+      .revealed-letter {
+        color: white;
+      }
+
+      @keyframes letterSpinReveal {
+        0% {
+          transform: perspective(500px) rotateY(0deg);
+          background-color: #9c8a33;
+          border-color: var(--color-accent-secondary);
+          color: transparent;
+        }
+        49% {
+          transform: perspective(500px) rotateY(180deg);
+          background-color: var(--color-accent-secondary);
+          border-color: color-mix(
+            in srgb,
+            var(--color-accent-secondary) 70%,
+            white 10%
+          );
+          color: transparent;
+        }
+        50% {
+          transform: perspective(500px) rotateY(180deg);
+          background-color: color-mix(
+            in srgb,
+            var(--color-accent-secondary) 80%,
+            white 10%
+          );
+          border-color: color-mix(
+            in srgb,
+            var(--color-accent-secondary) 65%,
+            white 25%
+          );
+          color: white;
+        }
+        100% {
+          transform: perspective(500px) rotateY(360deg);
+          background-color: color-mix(
+            in srgb,
+            var(--color-accent-secondary) 80%,
+            white 10%
+          );
+          border-color: color-mix(
+            in srgb,
+            var(--color-accent-secondary) 65%,
+            white 25%
+          );
+          color: white;
+        }
+      }
+
+      .spinning-letter {
+        animation: letterSpinReveal 0.8s ease-in-out;
+        transform-style: preserve-3d;
+        backface-visibility: hidden;
+      }
+
+      .submit-box {
+        margin-top: var(--space-5);
+        padding: var(--space-4);
+        text-align: center;
+      }
+
+      .submit-message {
+        font-weight: var(--weight-bold);
+        margin-bottom: var(--space-2);
+      }
+
+      .submit-buttons {
+        display: flex;
+        justify-content: center;
+        gap: var(--space-3);
+        margin-bottom: var(--space-2);
+        flex-wrap: wrap;
+      }
+
+      .submit-note {
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+      }
+
+      #share-container {
+        display: flex;
+        justify-content: center;
+        gap: var(--space-3);
+        margin-top: var(--space-5);
+        opacity: 0;
+        transition: opacity var(--transition-med);
+      }
+
+      #share-container.visible {
+        opacity: 1;
+      }
+
+      #how-to-play-btn {
+        margin-top: var(--space-2);
+      }
+
+      #how-to-play-modal {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: var(--space-4);
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 1000;
+      }
+
+      #how-to-play-card {
+        max-width: 560px;
+        width: 100%;
+        padding: var(--space-5);
+      }
+
+      #how-to-play-card h2 {
+        margin-top: 0;
+        margin-bottom: var(--space-3);
+        text-align: center;
+      }
+
+      #how-to-play-card p {
+        margin-bottom: var(--space-3);
+      }
+
+      #how-to-play-actions {
+        display: flex;
+        justify-content: center;
+        margin-top: var(--space-4);
+      }
+
+      #how-to-play-modal[hidden] {
+        display: none;
+      }
+
+      #how-to-play-btn {
+        position: absolute;
+        top: var(--space-5);
+        right: var(--space-5);
+        z-index: 2;
+      }
+    </style>
   </head>
-  <style>
-    body {
-      background-color: #121213;
-      color: white;
-      font-family: Arial, Helvetica, sans-serif;
-      margin: 0;
-      padding: 20px;
-    }
 
-    #game {
-      max-width: 900px;
-      margin: 0 auto;
-    }
-
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    #message {
-      min-height: 24px;
-      margin-bottom: 20px;
-      text-align: center;
-      font-weight: bold;
-    }
-
-    #board {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .chain-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .chain-input {
-      width: 120px;
-      padding: 10px;
-      font-size: 1rem;
-      text-transform: uppercase;
-      text-align: center;
-      border: 2px solid #565758;
-      border-radius: 8px;
-      box-sizing: border-box;
-    }
-
-    .chain-input::placeholder {
-      color: #d8d8d8;
-      opacity: 1;
-    }
-
-    .chain-letter {
-      width: 44px;
-      height: 44px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.3rem;
-      font-weight: bold;
-      background-color: #b59f3b;
-      color: white;
-      border: 2px solid #d6c25c;
-      border-radius: 8px;
-      box-sizing: border-box;
-      flex-shrink: 0;
-    }
-
-    .chain-letter.hidden-letter {
-      background-color: #3a3a3c;
-      border-color: #565758;
-      color: white;
-    }
-
-    .valid-row {
-      background-color: #2f855a;
-      border-radius: 8px;
-      padding: 8px;
-    }
-
-    .valid-step {
-      border-color: #2f855a !important;
-    }
-
-    .invalid-step {
-      border-color: #c53030 !important;
-    }
-
-    .letter-box-yellow {
-      background-color: #b59f3b;
-      border-color: #d6c25c;
-    }
-
-    .letter-box-green {
-      background-color: #2f855a;
-      border-color: #68d391;
-    }
-
-    .letter-box-red {
-      background-color: #c53030;
-      border-color: #fc8181;
-    }
-
-    .field-in-progress,
-    .field-provisional {
-      border-width: 3px;
-      border-color: #b59f3b;
-    }
-
-    .field-confirmed {
-      border-width: 3px;
-      border-color: #2f855a;
-    }
-
-    .field-error {
-      border-width: 3px;
-      border-color: #c53030;
-    }
-
-    #score-panel {
-      text-align: center;
-      margin-bottom: 6px;
-      padding: 14px 18px;
-      background-color: #1f1f21;
-      border: 2px solid #3a3a3c;
-      border-radius: 12px;
-      max-width: 280px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-
-    #score-label {
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #aaa;
-      margin-bottom: 4px;
-    }
-
-    #current-score {
-      font-size: 2rem;
-      font-weight: bold;
-      line-height: 1.1;
-      color: white;
-    }
-
-    #score-message {
-      margin-top: 6px;
-      font-size: 0.95rem;
-      color: #d6c25c;
-      min-height: 1.2em;
-    }
-
-    .dictionary-invalid-text {
-      color: #fc8181;
-    }
-
-    @keyframes dictionaryShake {
-      0% {
-        transform: translateX(0);
-      }
-      20% {
-        transform: translateX(-6px);
-      }
-      40% {
-        transform: translateX(6px);
-      }
-      60% {
-        transform: translateX(-5px);
-      }
-      80% {
-        transform: translateX(5px);
-      }
-      100% {
-        transform: translateX(0);
-      }
-    }
-
-    .dictionary-shake {
-      animation: dictionaryShake 0.35s;
-    }
-
-    @keyframes rowDropIn {
-      0% {
-        opacity: 0;
-        transform: translateY(-36px);
-      }
-      100% {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    @keyframes bottomRowBump {
-      0% {
-        opacity: 0;
-        transform: translateY(-36px);
-      }
-      30% {
-        opacity: 1;
-        transform: translateY(0);
-      }
-      50% {
-        transform: translateY(-10px);
-      }
-      100% {
-        transform: translateY(0);
-      }
-    }
-
-    .dropping-row {
-      animation: rowDropIn 0.34s ease-out;
-    }
-
-    .bottom-bump-row {
-      animation: bottomRowBump 0.65s ease;
-    }
-
-    .revealed-letter {
-      color: white;
-    }
-
-    @keyframes letterSpinReveal {
-      0% {
-        transform: perspective(500px) rotateY(0deg);
-        background-color: #9c8a33;
-        border-color: #b59f3b;
-        color: transparent;
-      }
-      49% {
-        transform: perspective(500px) rotateY(180deg);
-        background-color: #b59f3b;
-        border-color: #d6c25c;
-        color: transparent;
-      }
-      50% {
-        transform: perspective(500px) rotateY(180deg);
-        background-color: #d6c25c;
-        border-color: #f0df87;
-        color: white;
-      }
-      100% {
-        transform: perspective(500px) rotateY(360deg);
-        background-color: #d6c25c;
-        border-color: #f0df87;
-        color: white;
-      }
-    }
-
-    .spinning-letter {
-      animation: letterSpinReveal 0.8s ease-in-out;
-      transform-style: preserve-3d;
-      backface-visibility: hidden;
-    }
-
-    .submit-box {
-      margin-top: 20px;
-      padding: 16px;
-      background: #1f1f21;
-      border-radius: 10px;
-      text-align: center;
-    }
-
-    .submit-message {
-      font-weight: bold;
-      margin-bottom: 10px;
-    }
-
-    .submit-buttons {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin-bottom: 8px;
-    }
-
-    .submit-buttons button {
-      padding: 8px 14px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    .submit-note {
-      font-size: 0.8rem;
-      color: #aaa;
-    }
-
-    #share-container.visible {
-      opacity: 1;
-    }
-
-    #share-puzzle-btn,
-    #share-results-btn {
-      padding: 10px 18px;
-      font-size: 0.95rem;
-      font-weight: bold;
-      letter-spacing: 0.5px;
-      background-color: #2d2d30;
-      color: white;
-      border: 2px solid #3a3a3c;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.15s ease;
-    }
-
-    #share-puzzle-btn:hover,
-    #share-results-btn:hover {
-      background-color: #3a3a3c;
-      border-color: #565758;
-      box-shadow: 0 0 8px rgba(240, 223, 135, 0.4);
-    }
-
-    #share-puzzle-btn:active,
-    #share-results-btn:active {
-      transform: scale(0.96);
-    }
-
-    #mode-panel {
-      margin-bottom: 12px;
-      text-align: center;
-    }
-
-    #mode-buttons {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin-bottom: 8px;
-    }
-
-    #mode-buttons button,
-    #load-practice-btn {
-      padding: 8px 14px;
-      font-weight: bold;
-      cursor: pointer;
-      border-radius: 8px;
-      border: 2px solid #3a3a3c;
-      background-color: #2d2d30;
-      color: white;
-    }
-
-    #practice-panel {
-      justify-content: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    #practice-panel.visible {
-      display: flex;
-    }
-
-    #practice-phrase-input {
-      width: 260px;
-      padding: 10px;
-      border-radius: 8px;
-      border: 2px solid #565758;
-      background-color: #121213;
-      color: white;
-      text-transform: uppercase;
-      text-align: center;
-    }
-
-    .mode-selected {
-      background-color: #b59f3b !important;
-      border-color: #d6c25c !important;
-      color: black !important;
-    }
-
-    .warning-spacer {
-      height: 12px;
-    }
-
-    #puzzle-label {
-      text-align: center;
-      font-weight: bold;
-      margin-bottom: 12px;
-      color: #d6c25c;
-    }
-
-    #share-container {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 20px;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
-  </style>
-  <body>
-    <div id="game">
-      <h1>AddaGrams</h1>
-
-      <div id="score-panel" hidden>
-        <div id="score-label">Letters used</div>
-        <div id="current-score">0</div>
-        <div id="score-message"></div>
-      </div>
-      <div id="message"></div>
-      <div id="mode-panel">
-        <div id="mode-buttons">
-          <button id="daily-mode-btn">Daily Puzzle</button>
-          <button id="practice-mode-btn">Practice Mode</button>
+  <body class="game-addagrams">
+    <div class="game-shell">
+      <div id="game" class="panel game-panel addagrams-panel">
+        <h1 class="game-title-vertical">
+          add<mark style="background-color: #6bcf8b; color: #f3f1ea">A</mark
+          >gram<mark style="background-color: #6bcf8b; color: #f3f1ea">S</mark>
+        </h1>
+        <button id="how-to-play-btn" class="button">How to Play</button>
+        <div id="score-panel" class="panel" hidden>
+          <div id="score-label">Letters used</div>
+          <div id="current-score">0</div>
+          <div id="score-message"></div>
         </div>
 
-        <div id="practice-panel" hidden>
-          <input
-            id="practice-phrase-input"
-            type="text"
-            placeholder="Enter two-word phrase"
-          />
-          <button id="load-practice-btn">Load Practice Puzzle</button>
+        <div id="message" class="toast"></div>
+
+        <div id="mode-panel">
+          <div id="mode-buttons">
+            <button id="daily-mode-btn" class="button button--primary">
+              Daily Puzzle
+            </button>
+            <button id="practice-mode-btn" class="button">Practice Mode</button>
+          </div>
+
+          <div id="practice-panel" hidden>
+            <input
+              id="practice-phrase-input"
+              class="input"
+              type="text"
+              placeholder="Enter two-word phrase"
+            />
+            <button id="load-practice-btn" class="button button--secondary">
+              Load Practice Puzzle
+            </button>
+          </div>
+
+          <div id="fairness-warning" hidden></div>
         </div>
 
-        <div id="fairness-warning" hidden></div>
+        <div id="puzzle-label"></div>
+        <div id="board"></div>
       </div>
-      <div id="puzzle-label"></div>
-      <div id="board"></div>
+
+      <div id="share-container" hidden>
+        <button id="share-puzzle-btn" class="button">Share Puzzle</button>
+        <button id="share-results-btn" class="button">Share Results</button>
+      </div>
     </div>
-    <div id="share-container" hidden>
-      <button id="share-puzzle-btn">Share Puzzle</button>
-      <button id="share-results-btn">Share Results</button>
+    <div id="how-to-play-modal" hidden>
+      <div id="how-to-play-card" class="panel">
+        <h2>How to Play</h2>
+
+        <p>Each row is a 3-word chain.</p>
+
+        <p>Word 2 must be an anagram of Word 1 plus the first given letter.</p>
+
+        <p>Word 3 must be an anagram of Word 2 plus the second given letter.</p>
+
+        <p><strong>Example:</strong> RATE + S → STARE + W → WATERS</p>
+
+        <p>
+          <strong>Green</strong> means confirmed.<br />
+          <strong>Yellow</strong> means not fully judgeable yet.<br />
+          <strong>Red</strong> means something is wrong.
+        </p>
+
+        <p>You can keep editing to use more letters, even after you're done.</p>
+
+        <div id="how-to-play-actions">
+          <button id="close-how-to-play-btn" class="button button--primary">
+            Got it
+          </button>
+        </div>
+      </div>
     </div>
     <script src="script.js"></script>
   </body>
