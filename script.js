@@ -417,6 +417,46 @@ function clearSpinningLetterKeys() {
   gameState.spinningLetterKeys = new Set();
 }
 
+function renderLoadingPreviewRow() {
+  board.innerHTML = "";
+  board.classList.add("ready");
+
+  const rowDiv = document.createElement("div");
+  rowDiv.className = "chain-row";
+
+  const baseInput = document.createElement("input");
+  baseInput.className = "chain-input";
+  baseInput.type = "text";
+  baseInput.placeholder = "";
+  baseInput.disabled = true;
+
+  const letterADiv = document.createElement("div");
+  letterADiv.className = "chain-letter";
+
+  const middleInput = document.createElement("input");
+  middleInput.className = "chain-input";
+  middleInput.type = "text";
+  middleInput.placeholder = "";
+  middleInput.disabled = true;
+
+  const letterBDiv = document.createElement("div");
+  letterBDiv.className = "chain-letter";
+
+  const finalInput = document.createElement("input");
+  finalInput.className = "chain-input";
+  finalInput.type = "text";
+  finalInput.placeholder = "";
+  finalInput.disabled = true;
+
+  rowDiv.appendChild(baseInput);
+  rowDiv.appendChild(letterADiv);
+  rowDiv.appendChild(middleInput);
+  rowDiv.appendChild(letterBDiv);
+  rowDiv.appendChild(finalInput);
+
+  board.appendChild(rowDiv);
+}
+
 function renderBoard() {
   board.innerHTML = "";
 
@@ -426,6 +466,12 @@ function renderBoard() {
     rowsToRender = gameState.rows.slice(0, 1);
   } else {
     rowsToRender = gameState.rows.slice(0, gameState.visibleRowCount);
+  }
+
+  if (rowsToRender.length > 0) {
+    board.classList.add("ready");
+  } else {
+    board.classList.remove("ready");
   }
 
   rowsToRender.forEach((row, rowIndex) => {
@@ -461,7 +507,8 @@ function renderBoard() {
     baseInput.dataset.row = rowIndex;
     baseInput.dataset.field = "baseWord";
     baseInput.addEventListener("input", handleInput);
-    baseInput.disabled = gameState.startPhase !== "ready";
+    baseInput.disabled =
+      gameState.startPhase !== "ready" || isChoosingPracticePuzzle();
 
     const letterADiv = document.createElement("div");
     letterADiv.className = "chain-letter";
@@ -487,7 +534,8 @@ function renderBoard() {
     middleInput.dataset.row = rowIndex;
     middleInput.dataset.field = "middleWord";
     middleInput.addEventListener("input", handleInput);
-    middleInput.disabled = gameState.startPhase !== "ready";
+    middleInput.disabled =
+      gameState.startPhase !== "ready" || isChoosingPracticePuzzle();
 
     const letterBDiv = document.createElement("div");
     letterBDiv.className = "chain-letter";
@@ -513,7 +561,8 @@ function renderBoard() {
     finalInput.dataset.row = rowIndex;
     finalInput.dataset.field = "finalWord";
     finalInput.addEventListener("input", handleInput);
-    finalInput.disabled = gameState.startPhase !== "ready";
+    finalInput.disabled =
+      gameState.startPhase !== "ready" || isChoosingPracticePuzzle();
 
     rowDiv.appendChild(baseInput);
     rowDiv.appendChild(letterADiv);
@@ -523,6 +572,7 @@ function renderBoard() {
 
     board.appendChild(rowDiv);
   });
+  updatePuzzleLabel();
   renderShareButton();
 }
 
@@ -1312,8 +1362,11 @@ function handleDailyMode() {
   }
 
   const todayPhrase = selectTrueDailyPhrase();
+  const todayStamp = getTorontoDateStamp();
+  const todayDailySave = loadDailySaveForDate(todayStamp);
 
   if (
+    !isChoosingPracticePuzzle() &&
     gameState.puzzleSource === "daily" &&
     gameState.selectedPhrase === todayPhrase
   ) {
@@ -1324,9 +1377,17 @@ function handleDailyMode() {
   gameState.puzzleSource = "daily";
   gameState.urlPhrase = null;
   gameState.selectedPhrase = todayPhrase;
-  updatePuzzleLabel();
 
   renderModePanel();
+
+  if (
+    savedProgressIsUsable(todayDailySave) &&
+    todayDailySave.selectedPhrase === todayPhrase
+  ) {
+    launchSelectedPuzzle(todayDailySave);
+    return;
+  }
+
   launchSelectedPuzzle();
 }
 
@@ -1338,10 +1399,23 @@ function updatePuzzleLabel() {
     return;
   }
 
+  if (isChoosingPracticePuzzle()) {
+    puzzleLabel.textContent = "";
+    return;
+  }
+
+  const shouldShowLabel = gameState.startPhase === "ready";
+
+  if (!shouldShowLabel) {
+    puzzleLabel.textContent = "";
+    return;
+  }
+
   if (gameState.puzzleSource === "daily") {
     const dateStamp = getTorontoDateStamp();
     const formattedDate = formatDateLong(dateStamp);
     puzzleLabel.textContent = `Daily Puzzle — ${formattedDate}`;
+    puzzleLabel.classList.add("visible");
     return;
   }
 
@@ -1356,6 +1430,7 @@ function updatePuzzleLabel() {
   }
 
   puzzleLabel.textContent = "";
+  puzzleLabel.classList.remove("visible");
 }
 
 function getShareStepSquare(stepStatus) {
@@ -1460,7 +1535,7 @@ function launchSelectedPuzzle(savedProgress = null) {
   renderBoard();
   updatePuzzleLabel();
 
-  const introDelay = 300;
+  const introDelay = 500;
 
   setTimeout(() => {
     if (gameState.startPhase === "preview") {
@@ -1632,6 +1707,7 @@ function handlePracticeMode() {
 
   renderFairnessWarning([]);
   renderModePanel();
+  renderBoard();
 }
 
 function getUnfairPairsFromPhrase(secretPhrase) {
@@ -1673,6 +1749,10 @@ function loadPracticePuzzle(normalizedPhrase) {
   launchSelectedPuzzle();
 }
 
+function isChoosingPracticePuzzle() {
+  return gameState.mode === "practice" && gameState.puzzleSource !== "practice";
+}
+
 function renderFairnessWarning(unfairPairs) {
   const warningDiv = document.getElementById("fairness-warning");
 
@@ -1685,23 +1765,23 @@ function renderFairnessWarning(unfairPairs) {
   warningDiv.hidden = false;
 
   warningDiv.innerHTML = `
-    <div class="submit-box">
-      <div class="submit-message">
-        In Daily Mode, we usually avoid uncommon letter combinations because they may have few or no reasonable solutions. This phrase includes one or more uncommon pairs. Do you want to continue anyway?
-      </div>
-
-<div class="submit-note">
-  Uncommon pair(s): ${unfairPairs.join(", ")}
-</div>
-
-<div class="warning-spacer"></div>
-
-<div class="submit-buttons">
-        <button id="practice-go-back-btn">GO BACK</button>
-        <button id="practice-continue-btn">CONTINUE ANYWAY</button>
-      </div>
+  <div class="submit-box panel">
+    <div class="submit-message">
+      In Daily Mode, we usually avoid uncommon letter combinations because they may have few or no reasonable solutions. This phrase includes one or more uncommon pairs. Do you want to continue anyway?
     </div>
-  `;
+
+    <div class="submit-note">
+      Uncommon pair(s): ${unfairPairs.join(", ")}
+    </div>
+
+    <div class="warning-spacer"></div>
+
+    <div class="submit-buttons">
+      <button id="practice-go-back-btn" class="button">GO BACK</button>
+      <button id="practice-continue-btn" class="button button--secondary">CONTINUE ANYWAY</button>
+    </div>
+  </div>
+`;
 
   document
     .getElementById("practice-go-back-btn")
@@ -1725,23 +1805,39 @@ function renderModePanel() {
   const dailyBtn = document.getElementById("daily-mode-btn");
   const practiceBtn = document.getElementById("practice-mode-btn");
 
-  if (gameState.mode === "practice") {
+  const dailyIsActive =
+    !isChoosingPracticePuzzle() &&
+    gameState.puzzleSource === "daily" &&
+    gameState.selectedPhrase === selectTrueDailyPhrase();
+
+  const practiceIsChoosing = isChoosingPracticePuzzle();
+  const practiceIsActive = gameState.puzzleSource === "practice";
+
+  if (practiceIsChoosing) {
     practicePanel.hidden = false;
     practicePanel.classList.add("visible");
-    practiceBtn.classList.add("mode-selected");
-    dailyBtn.classList.remove("mode-selected");
   } else {
     practicePanel.hidden = true;
     practicePanel.classList.remove("visible");
+  }
+
+  if (dailyIsActive) {
     dailyBtn.classList.add("mode-selected");
+  } else {
+    dailyBtn.classList.remove("mode-selected");
+  }
+
+  if (practiceIsChoosing || practiceIsActive) {
+    practiceBtn.classList.add("mode-selected");
+  } else {
     practiceBtn.classList.remove("mode-selected");
   }
 
+  dailyBtn.disabled = dailyIsActive;
+  practiceBtn.disabled = practiceIsActive;
+
   input.value = gameState.pendingPracticePhrase;
 
-  dailyBtn.disabled =
-    gameState.puzzleSource === "daily" &&
-    gameState.selectedPhrase === selectTrueDailyPhrase();
   updatePuzzleLabel();
 }
 
@@ -1813,5 +1909,6 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
+renderLoadingPreviewRow();
 loadGameData();
 updateScoreDisplay();

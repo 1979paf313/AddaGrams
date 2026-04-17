@@ -11,8 +11,28 @@
         gap: var(--space-4);
       }
 
+      .app {
+        width: min(860px, 94vw);
+        margin: 0 auto;
+      }
+
+      body.game-addagrams {
+        padding: 10px 20px 20px;
+      }
+
+      .game-addagrams .game-title-vertical {
+        font-size: 2.4rem;
+      }
+
       .addagrams-panel {
-        padding: var(--space-6);
+        padding: 20px var(--space-6) var(--space-6);
+      }
+
+      .title-mark {
+        background-color: var(--color-success);
+        color: var(--color-text);
+        padding: 0 0.08em;
+        border-radius: 0.18em;
       }
 
       #mode-panel {
@@ -24,7 +44,7 @@
         display: flex;
         justify-content: center;
         gap: var(--space-3);
-        margin-bottom: var(--space-1);
+        margin-bottom: var(--space-3);
         flex-wrap: wrap;
       }
 
@@ -33,6 +53,16 @@
         font-weight: var(--weight-bold);
         margin-bottom: var(--space-2);
         color: var(--color-accent-secondary);
+        opacity: 0;
+        transition: opacity var(--transition-slow);
+      }
+
+      #puzzle-label:empty {
+        display: none;
+      }
+
+      #puzzle-label.visible {
+        opacity: 1;
       }
 
       #message {
@@ -103,18 +133,25 @@
         flex-direction: column;
         align-items: center;
         gap: var(--space-3);
+        opacity: 0;
+        transition: opacity var(--transition-med);
+      }
+
+      #board.ready {
+        opacity: 1;
       }
 
       .chain-row {
         display: flex;
         align-items: center;
         gap: var(--space-2);
-        flex-wrap: wrap;
-        padding: var(--space-2);
-        border-radius: var(--radius-md);
+        width: 100%;
+        max-width: 640px;
       }
 
       .chain-input {
+        flex: 1;
+        min-width: 0;
         width: 120px;
         padding: 10px;
         font-size: 1rem;
@@ -133,8 +170,9 @@
       }
 
       .chain-letter {
-        width: 44px;
-        height: 44px;
+        width: 40px;
+        height: 40px;
+        flex: 0 0 40px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -153,6 +191,23 @@
         background-color: #3a3a3c;
         border-color: #565758;
         color: white;
+      }
+
+      .mode-selected {
+        background: linear-gradient(
+          180deg,
+          color-mix(in srgb, var(--color-accent-primary) 80%, white 10%),
+          var(--color-accent-primary)
+        );
+        color: #10201e;
+        border-color: transparent;
+      }
+
+      .button:disabled {
+        opacity: 0.72;
+        cursor: default;
+        filter: none;
+        transform: none;
       }
 
       .valid-row {
@@ -417,46 +472,53 @@
   </head>
 
   <body class="game-addagrams">
-    <div class="game-shell">
-      <div id="game" class="panel game-panel addagrams-panel">
-        <h1 class="game-title-vertical">
-          add<mark style="background-color: #6bcf8b; color: #f3f1ea">A</mark
-          >gram<mark style="background-color: #6bcf8b; color: #f3f1ea">S</mark>
-        </h1>
-        <button id="how-to-play-btn" class="button">How to Play</button>
-        <div id="score-panel" class="panel" hidden>
-          <div id="score-label">Letters used</div>
-          <div id="current-score">0</div>
-          <div id="score-message"></div>
+    <div class="app game-shell">
+      <div class="game-frame">
+        <div class="game-title-rail">
+          <h1 class="game-title-vertical">
+            add<mark class="title-mark">A</mark>gram<mark class="title-mark"
+              >S</mark
+            >
+          </h1>
         </div>
 
-        <div id="message" class="toast"></div>
+        <div id="game" class="panel game-panel addagrams-panel">
+          <button id="how-to-play-btn" class="button">How to Play</button>
 
-        <div id="mode-panel">
-          <div id="mode-buttons">
-            <button id="daily-mode-btn" class="button button--primary">
-              Daily Puzzle
-            </button>
-            <button id="practice-mode-btn" class="button">Practice Mode</button>
+          <div id="score-panel" class="panel" hidden>
+            <div id="score-label">Letters used</div>
+            <div id="current-score">0</div>
+            <div id="score-message"></div>
           </div>
 
-          <div id="practice-panel" hidden>
-            <input
-              id="practice-phrase-input"
-              class="input"
-              type="text"
-              placeholder="Enter two-word phrase"
-            />
-            <button id="load-practice-btn" class="button button--secondary">
-              Load Practice Puzzle
-            </button>
+          <div id="message" class="toast"></div>
+
+          <div id="mode-panel">
+            <div id="mode-buttons">
+              <button id="daily-mode-btn" class="button">Daily Puzzle</button>
+              <button id="practice-mode-btn" class="button">
+                Practice Mode
+              </button>
+            </div>
+
+            <div id="practice-panel" hidden>
+              <input
+                id="practice-phrase-input"
+                class="input"
+                type="text"
+                placeholder="Enter two-word phrase"
+              />
+              <button id="load-practice-btn" class="button button--secondary">
+                Load Practice Puzzle
+              </button>
+            </div>
+
+            <div id="fairness-warning" hidden></div>
           </div>
 
-          <div id="fairness-warning" hidden></div>
+          <div id="puzzle-label"></div>
+          <div id="board"></div>
         </div>
-
-        <div id="puzzle-label"></div>
-        <div id="board"></div>
       </div>
 
       <div id="share-container" hidden>
@@ -464,6 +526,7 @@
         <button id="share-results-btn" class="button">Share Results</button>
       </div>
     </div>
+
     <div id="how-to-play-modal" hidden>
       <div id="how-to-play-card" class="panel">
         <h2>How to Play</h2>
