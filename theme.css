@@ -201,54 +201,51 @@ select:focus {
 #message:empty {
   display: none;
 }
-.game-panel {
-  position: relative;
+
+.game-frame {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: var(--space-3);
+  align-items: stretch;
+}
+
+.game-title-rail {
+  display: right;
+  align-items: right;
+  overflow: visible;
 }
 
 .game-title-vertical {
-  position: absolute;
-  left: -34px;
-  top: 50%;
   margin: 0;
-  transform: translateY(-50%) rotate(-90deg);
-  transform-origin: center;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
   white-space: nowrap;
-
+  pointer-events: none;
   font-family: var(--font-ui);
-  font-size: 2.7rem;
+  font-size: 2.4rem;
   line-height: 1;
   font-weight: var(--weight-bold);
-  letter-spacing: 0.02em;
-
+  letter-spacing: 0.01em;
   color: color-mix(
     in srgb,
     var(--color-text) 90%,
     var(--color-accent-secondary) 10%
   );
-  opacity: 0.92;
-  pointer-events: none;
+  opacity: 0.9;
 }
 
 .game-panel {
   position: relative;
+  min-width: 0;
 }
 
-.game-title-vertical {
-  position: absolute;
-  left: -34px;
-  top: 50%;
-  margin: 0;
-  transform: translateY(-50%) rotate(-90deg);
-  transform-origin: center;
-  white-space: nowrap;
+@media (max-width: 860px) {
+  .game-frame {
+    grid-template-columns: 42px 1fr;
+    gap: var(--space-2);
+  }
 
-  font-family: var(--font-ui);
-  font-size: 2.5rem;
-  line-height: 1;
-  font-weight: var(--weight-bold);
-  letter-spacing: 0.02em;
-
-  color: color-mix(in srgb, var(--color-text) 90%, var(--color-accent-secondary) 10%);
-  opacity: 0.92;
-  pointer-events: none;
+  .game-title-vertical {
+    font-size: 1.7rem;
+  }
 }
